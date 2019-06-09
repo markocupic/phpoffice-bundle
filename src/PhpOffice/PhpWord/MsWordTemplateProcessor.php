@@ -26,6 +26,21 @@ use PhpOffice\PhpWord\TemplateProcessor;
  * // Create phpword instance
  * $objPhpWord = Markocupic\PhpOffice\PhpWord\MsWordTemplateProcessor::create('files/ms_word_templates/my_ms_word_template.docx', 'system/tmp/output.docx');
  *
+ *
+ * // Options defaults
+ * $optionsDefaults = array(
+ *      'multiline' => false,
+ *      'limit' => -1
+ * );
+ *
+ * // Simple replacement
+ * $objPhpWord->pushData('category', 'Elite men');
+ *
+ * // Another multiline replacement
+ * $options = array('multiline' => true);
+ * $objPhpWord->pushData('sometext', 'Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt', $options);
+ *
+ * // Clone rows
  * // Push first datarecord to cloned row
  * $row = array(
  *   array('key' => 'rank', 'value' => '1', 'options' => array('multiline' => false)),
@@ -48,11 +63,6 @@ use PhpOffice\PhpWord\TemplateProcessor;
  *
  * // Push third datarecord, etc...
  *
- *
- * // Simple replacement
- * $objPhpWord->pushData('category', 'Elite men', array('multiline' => false));
- * // Another multiline replacement
- * $objPhpWord->pushData('sometext', 'Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt', array('multiline' => true));
  *
  *
  * // Create & send file to browser
@@ -221,20 +231,28 @@ class MsWordTemplateProcessor extends TemplateProcessor
                             $row = $key + 1;
                             foreach ($arrRow as $arrRowData)
                             {
+                                // If multiline
                                 if (isset($arrRowData['options']['multiline']) && !empty($arrRowData['options']['multiline']))
                                 {
                                     if ($arrRowData['options']['multiline'] === true)
                                     {
-                                        $aData['value'] = static::formatMultilineText($aData['value']);
+                                        $arrRowData['value'] = static::formatMultilineText($arrRowData['value']);
                                     }
                                 }
-                                $this->setValue($arrRowData['key'] . '#' . $row, $arrRowData['value']);
+
+                                // If maximum replacement limit
+                                if (!isset($arrRowData['options']['limit']))
+                                {
+                                    $arrRowData['options']['limit'] = static::MAXIMUM_REPLACEMENTS_DEFAULT;
+                                }
+                                $this->setValue($arrRowData['key'] . '#' . $row, $arrRowData['value'], $arrRowData['options']['limit']);
                             }
                         }
                     }
                 }
                 else
                 {
+                    // If multiline
                     if (isset($aData['options']['multiline']) && !empty($aData['options']['multiline']))
                     {
                         if ($aData['options']['multiline'] === true)
@@ -242,7 +260,14 @@ class MsWordTemplateProcessor extends TemplateProcessor
                             $aData['value'] = static::formatMultilineText($aData['value']);
                         }
                     }
-                    $this->setValue($aData['key'], $aData['value']);
+
+                    // If maximum replacement limit
+                    if (!isset($aData['options']['limit']))
+                    {
+                        $aData['options']['limit'] = static::MAXIMUM_REPLACEMENTS_DEFAULT;
+                    }
+
+                    $this->setValue($aData['key'], $aData['value'], $aData['options']['limit']);
                 }
             }
 

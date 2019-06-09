@@ -9,6 +9,21 @@ Watch the [demo template](https://github.com/markocupic/docx-from-template-bundl
 // Create phpword instance
 $objPhpWord = Markocupic\PhpOffice\PhpWord\MsWordTemplateProcessor::create('vendor/markocupic/docx-from-template-bundle/src/example/my_ms_word_template.docx', 'system/tmp/output.docx');
 
+// Options defaults
+$optionsDefaults = array(
+    'multiline' => false,
+    'limit' => -1
+);
+
+// Simple replacement
+$objPhpWord->pushData('category', 'Elite men');
+
+// Another multiline replacement
+$options = array('multiline' => true); 
+$objPhpWord->pushData('sometext', 'Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt', $options);
+
+
+// Clone rows
 // Push first datarecord to cloned row
 $row = array(
         array('key' => 'rank', 'value' => '1', 'options' => array('multiline' => false)),
@@ -30,13 +45,7 @@ $row = array(
 $objPhpWord->pushClone('rank', $row);
 
 // Push third datarecord, etc...
-
-
-// Simple replacement
-$objPhpWord->pushData('category', 'Elite men', array('multiline' => false));
-
-// Another multiline replacement
-$objPhpWord->pushData('sometext', 'Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt', array('multiline' => true));
+$row = array(/** **/); 
 
 // Create & send file to browser
 $objPhpWord->sendToBrowser(true)

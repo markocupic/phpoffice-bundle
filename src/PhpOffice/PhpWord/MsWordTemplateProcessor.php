@@ -17,61 +17,10 @@ use Symfony\Component\Filesystem\Exception\FileNotFoundException;
 use PhpOffice\PhpWord\TemplateProcessor;
 
 /**
+ * @see README.md
  * Class MsWordTemplateProcessor
  * @package Markocupic\PhpOffice\PhpWord
- *
- *
- * Exampe usage (see Readme.md):
- *
- * // Create phpword instance
- * $objPhpWord = Markocupic\PhpOffice\PhpWord\MsWordTemplateProcessor::create('files/ms_word_templates/my_ms_word_template.docx', 'system/tmp/output.docx');
- *
- *
- * // Options defaults
- * $optionsDefaults = array(
- *      'multiline' => false,
- *      'limit' => -1
- * );
- *
- * // Simple replacement
- * $objPhpWord->pushData('category', 'Elite men');
- *
- * // Another multiline replacement
- * $options = array('multiline' => true);
- * $objPhpWord->pushData('sometext', 'Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt', $options);
- *
- * // Clone rows
- * // Push first datarecord to cloned row
- * $row = array(
- *   array('key' => 'rank', 'value' => '1', 'options' => array('multiline' => false)),
- *   array('key' => 'number', 'value' => '501', 'options' => array('multiline' => false)),
- *   array('key' => 'firstname', 'value' => 'James', 'options' => array('multiline' => false)),
- *   array('key' => 'lastname', 'value' => 'Last', 'options' => array('multiline' => false)),
- *   array('key' => 'time', 'value' => '01:23:55', 'options' => array('multiline' => false)),
- * );
- * $objPhpWord->replaceAndClone('rank', $row);
- *
- * // Push second datarecord to cloned row
- * $row = array(
- *   array('key' => 'rank', 'value' => '2', 'options' => array('multiline' => false)),
- *   array('key' => 'number', 'value' => '506', 'options' => array('multiline' => false)),
- *   array('key' => 'firstname', 'value' => 'Niki', 'options' => array('multiline' => false)),
- *   array('key' => 'lastname', 'value' => 'Nonsense', 'options' => array('multiline' => false)),
- *   array('key' => 'time', 'value' => '01:23:57', 'options' => array('multiline' => false)),
- * );
- * $objPhpWord->replaceAndClone('rank', $row);
- *
- * // Push third datarecord, etc...
- *
- *
- *
- * // Create & send file to browser
- * $objPhpWord->sendToBrowser(true)
- * ->generateUncached(true)
- * ->generate();
- *
- *
- **/
+ */
 class MsWordTemplateProcessor extends TemplateProcessor
 {
 
@@ -161,11 +110,69 @@ class MsWordTemplateProcessor extends TemplateProcessor
     }
 
     /**
+     * @param string $search
+     * @param string $path
+     * @param array $arrOptions
+     */
+    public function replaceWithImage(string $search, string $path, array $arrOptions)
+    {
+        if (!is_file($this->rootDir . '/' . $path))
+        {
+            return;
+        }
+
+        $arrImage = array(
+            'path' => $this->rootDir . '/' . $path
+        );
+
+        if (isset($arrOptions['width']) && $arrOptions['width'] != '')
+        {
+            $arrImage['width'] = $arrOptions['width'];
+            $arrImage['height'] = '';
+        }
+        elseif (isset($arrOptions['height']) && $arrOptions['height'] != '')
+        {
+            $arrImage['height'] = $arrOptions['height'];
+            $arrImage['width'] = '';
+        }
+
+        $limit = static::MAXIMUM_REPLACEMENTS_DEFAULT;
+        if (isset($arrOptions['limit']))
+        {
+            $limit = $arrOptions['limit'];
+        }
+
+        $this->setImageValue($search, $arrImage, $limit);
+    }
+
+    /**
      * @param string $cloneKey
      * @param array $arrData
      */
     public function replaceAndClone(string $cloneKey, array $arrData)
     {
+        if (empty($arrData))
+        {
+            return;
+        }
+
+        // Create new helper array
+        $aData = array();
+
+        foreach ($arrData as $arrRow)
+        {
+            if (!isset($arrRow[0]) || !isset($arrRow[1]))
+            {
+                continue;
+            }
+            $options = (isset($arrRow[2]) && is_array($arrRow[2])) ? $arrRow[2] : array();
+            $aData[] = array(
+                'key'     => $arrRow[0],
+                'value'   => $arrRow[1],
+                'options' => $options
+            );
+        }
+
         if (!is_array($this->arrData))
         {
             $this->arrData = [];
@@ -175,14 +182,14 @@ class MsWordTemplateProcessor extends TemplateProcessor
         {
             if ($this->arrData[$k]['clone'] === $cloneKey)
             {
-                $this->arrData[$k]['rows'][] = $arrData;
+                $this->arrData[$k]['rows'][] = $aData;
                 return;
             }
         }
 
         $this->arrData[] = array(
             'clone' => $cloneKey,
-            'rows'  => array($arrData)
+            'rows'  => array($aData)
         );
     }
 
@@ -215,7 +222,6 @@ class MsWordTemplateProcessor extends TemplateProcessor
         if (!is_file($this->rootDir . '/' . $this->destinationSrc) || $this->generateUncached === true)
         {
             // Process $this->arrData and replace the template vars
-
             foreach ($this->arrData as $aData)
             {
                 if (isset($aData['clone']) && !empty($aData['clone']))
@@ -245,7 +251,32 @@ class MsWordTemplateProcessor extends TemplateProcessor
                                 {
                                     $arrRowData['options']['limit'] = static::MAXIMUM_REPLACEMENTS_DEFAULT;
                                 }
-                                $this->setValue($arrRowData['key'] . '#' . $row, $arrRowData['value'], $arrRowData['options']['limit']);
+
+                                // Add image
+                                if (isset($arrRowData['value']) && $arrRowData['options']['type'] === 'image')
+                                {
+                                    if (is_file($this->rootDir . '/' . $arrRowData['value']))
+                                    {
+                                        $arrImg = array(
+                                            'path'   => $this->rootDir . '/' . $arrRowData['value'],
+                                            'height' => '',
+                                            'width'  => ''
+                                        );
+                                        if (isset($arrRowData['options']['width']) && $arrRowData['options']['width'] != '')
+                                        {
+                                            $arrImg['width'] = $arrRowData['options']['width'];
+                                        }
+                                        elseif (isset($arrRowData['options']['height']) && $arrRowData['options']['height'] != '')
+                                        {
+                                            $arrImg['height'] = $arrRowData['options']['height'];
+                                        }
+                                        $this->setImageValue($arrRowData['key'] . '#' . $row, $arrImg, $arrRowData['options']['limit']);
+                                    }
+                                }
+                                else // Add text
+                                {
+                                    $this->setValue($arrRowData['key'] . '#' . $row, $arrRowData['value'], $arrRowData['options']['limit']);
+                                }
                             }
                         }
                     }

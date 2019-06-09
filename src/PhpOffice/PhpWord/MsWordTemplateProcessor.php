@@ -49,7 +49,7 @@ use PhpOffice\PhpWord\TemplateProcessor;
  *   array('key' => 'lastname', 'value' => 'Last', 'options' => array('multiline' => false)),
  *   array('key' => 'time', 'value' => '01:23:55', 'options' => array('multiline' => false)),
  * );
- * $objPhpWord->pushClone('rank', $row);
+ * $objPhpWord->replaceAndClone('rank', $row);
  *
  * // Push second datarecord to cloned row
  * $row = array(
@@ -59,7 +59,7 @@ use PhpOffice\PhpWord\TemplateProcessor;
  *   array('key' => 'lastname', 'value' => 'Nonsense', 'options' => array('multiline' => false)),
  *   array('key' => 'time', 'value' => '01:23:57', 'options' => array('multiline' => false)),
  * );
- * $objPhpWord->pushClone('rank', $row);
+ * $objPhpWord->replaceAndClone('rank', $row);
  *
  * // Push third datarecord, etc...
  *
@@ -137,7 +137,7 @@ class MsWordTemplateProcessor extends TemplateProcessor
      * @param $value
      * @param array $options
      */
-    public function pushData(string $key, $value, array $options = array())
+    public function replace(string $key, $value, array $options = array())
     {
         if (!is_array($this->arrData))
         {
@@ -164,7 +164,7 @@ class MsWordTemplateProcessor extends TemplateProcessor
      * @param string $cloneKey
      * @param array $arrData
      */
-    public function pushClone(string $cloneKey, array $arrData)
+    public function replaceAndClone(string $cloneKey, array $arrData)
     {
         if (!is_array($this->arrData))
         {

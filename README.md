@@ -16,11 +16,11 @@ $optionsDefaults = array(
 );
 
 // Simple replacement
-$objPhpWord->pushData('category', 'Elite men');
+$objPhpWord->replace('category', 'Elite men');
 
 // Another multiline replacement
 $options = array('multiline' => true); 
-$objPhpWord->pushData('sometext', 'Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt', $options);
+$objPhpWord->replace('sometext', 'Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt', $options);
 
 
 // Clone rows
@@ -32,7 +32,7 @@ $row = array(
         array('key' => 'lastname', 'value' => 'Last', 'options' => array('multiline' => false)),
         array('key' => 'time', 'value' => '01:23:55', 'options' => array('multiline' => false)),
     );
-$objPhpWord->pushClone('rank', $row);
+$objPhpWord->replaceAndClone('rank', $row);
 
 // Push second datarecord to cloned row
 $row = array(
@@ -42,7 +42,7 @@ $row = array(
     array('key' => 'lastname', 'value' => 'Nonsense', 'options' => array('multiline' => false)),
     array('key' => 'time', 'value' => '01:23:57', 'options' => array('multiline' => false)),
 );
-$objPhpWord->pushClone('rank', $row);
+$objPhpWord->replaceAndClone('rank', $row);
 
 // Push third datarecord, etc...
 $row = array(/** **/); 

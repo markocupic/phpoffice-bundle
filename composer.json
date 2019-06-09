@@ -1,0 +1,38 @@
+{
+  "name": "markocupic/phpoffice-bundle",
+  "description": "Create Microsoft Word documents from a docx template.",
+  "keywords": [
+    "docx",
+    "template"
+  ],
+  "type": "contao-module",
+  "license": "LGPL-3.0+",
+  "authors": [
+    {
+      "name": "Marko Cupic",
+      "email": "m.cupic@gmx.ch",
+      "homepage": "https://github.com/markocupic",
+      "role": "Developer"
+    }
+  ],
+  "support": {
+    "issues": "https://github.com/markocupic/phpoffice-bundle/issues",
+    "source": "https://github.com/markocupic/phpoffice-bundle"
+  },
+  "require": {
+    "php": ">=7.1",
+    "contao/core-bundle": "^4.5",
+    "phpoffice/phpword": "^0.16"
+  },
+  "autoload": {
+    "psr-4": {
+      "Markocupic\\DocxFromTemplateBundle\\": "src/"
+    },
+    "classmap": [
+      "src/PhpOffice"
+    ]
+  },
+  "extra": {
+    "contao-manager-plugin": "Markocupic\\PhpOfficeBundle\\ContaoManager\\Plugin"
+  }
+}

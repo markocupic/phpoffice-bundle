@@ -11,12 +11,12 @@ Watch the [demo template](https://github.com/markocupic/docx-from-template-bundl
 $objPhpWord = Markocupic\PhpOffice\PhpWord\MsWordTemplateProcessor::create('vendor/markocupic/docx-from-template-bundle/src/example/my_ms_word_template.docx', 'system/tmp/output.docx');
 
 // Options defaults
-/**
-$optionsDefaults = array(
-    'multiline' => false,
-    'limit' => -1
-);
-**/ 
+
+//$optionsDefaults = array(
+//    'multiline' => false,
+//    'limit' => -1
+//);
+ 
 
 
 // Simple replacement

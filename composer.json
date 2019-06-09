@@ -1,9 +1,9 @@
 {
   "name": "markocupic/phpoffice-bundle",
-  "description": "Create Microsoft Word documents from a docx template.",
+  "description": "PhpOffice helper classes",
   "keywords": [
     "docx",
-    "template"
+    "template processor"
   ],
   "type": "contao-module",
   "license": "LGPL-3.0+",
@@ -26,7 +26,7 @@
   },
   "autoload": {
     "psr-4": {
-      "Markocupic\\DocxFromTemplateBundle\\": "src/"
+      "Markocupic\\PhpOfficeBundle\\": "src/"
     },
     "classmap": [
       "src/PhpOffice"

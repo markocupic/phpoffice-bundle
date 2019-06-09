@@ -1,6 +1,7 @@
 # PHPOffice Bundle
 
-## Generate easily Microsoft Word documents:
+## MsWordTemplateProcessor
+#### Generate easily Microsoft Word documents:
 
 Watch the [demo template](https://github.com/markocupic/docx-from-template-bundle/blob/master/src/example/my_ms_word_template.docx)
 

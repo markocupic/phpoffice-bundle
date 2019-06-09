@@ -26,12 +26,12 @@ $objPhpWord->replace('sometext', 'Lorem ipsum dolor sit amet, consetetur sadipsc
 // Clone rows
 // Push first datarecord to cloned row
 $row = array(
-        array('key' => 'rank', 'value' => '1', 'options' => array('multiline' => false)),
-        array('key' => 'number', 'value' => '501', 'options' => array('multiline' => false)),
-        array('key' => 'firstname', 'value' => 'James', 'options' => array('multiline' => false)),
-        array('key' => 'lastname', 'value' => 'Last', 'options' => array('multiline' => false)),
-        array('key' => 'time', 'value' => '01:23:55', 'options' => array('multiline' => false)),
-    );
+    array('key' => 'rank', 'value' => '1', 'options' => array('multiline' => false)),
+    array('key' => 'number', 'value' => '501', 'options' => array('multiline' => false)),
+    array('key' => 'firstname', 'value' => 'James', 'options' => array('multiline' => false)),
+    array('key' => 'lastname', 'value' => 'Last', 'options' => array('multiline' => false)),
+    array('key' => 'time', 'value' => '01:23:55', 'options' => array('multiline' => false)),
+);
 $objPhpWord->replaceAndClone('rank', $row);
 
 // Push second datarecord to cloned row

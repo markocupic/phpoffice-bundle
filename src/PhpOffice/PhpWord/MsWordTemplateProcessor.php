@@ -17,7 +17,7 @@ use Symfony\Component\Filesystem\Exception\FileNotFoundException;
 use PhpOffice\PhpWord\TemplateProcessor;
 
 /**
- * @see README.md
+ * @see README.md for usage explanations
  * Class MsWordTemplateProcessor
  * @package Markocupic\PhpOffice\PhpWord
  */
@@ -27,32 +27,42 @@ class MsWordTemplateProcessor extends TemplateProcessor
     /**
      * @var array
      */
-    private $arrData = array();
+    protected $arrData = array();
+
+    /**
+     * Key name in sstatic::addData
+     */
+    const ARR_DATA_CLONE_KEY = 'ARR_CLONES';
+
+    /**
+     * Key name in sstatic::addData
+     */
+    const ARR_DATA_REPLACEMENTS_KEY = 'ARR_REPLACEMENTS';
 
     /**
      * @var
      */
-    private $templSrc;
+    protected $templSrc;
 
     /**
      * @var
      */
-    private $destinationSrc;
+    protected $destinationSrc;
 
     /**
      * @var bool
      */
-    private $sendToBrowser = false;
+    protected $sendToBrowser = false;
 
     /**
      * @var bool
      */
-    private $generateUncached = false;
+    protected $generateUncached = false;
 
     /**
      * @var
      */
-    private $rootDir;
+    protected $rootDir;
 
     /**
      * @param string $templSrc
@@ -61,7 +71,7 @@ class MsWordTemplateProcessor extends TemplateProcessor
      * @throws \PhpOffice\PhpWord\Exception\CopyFileException
      * @throws \PhpOffice\PhpWord\Exception\CreateTemporaryFileException
      */
-    public static function create(string $templSrc, string $destinationSrc = '')
+    public static function create(string $templSrc, string $destinationSrc = ''): self
     {
         if ($destinationSrc === '')
         {
@@ -78,33 +88,21 @@ class MsWordTemplateProcessor extends TemplateProcessor
         $self->rootDir = $rootDir;
         $self->templSrc = $templSrc;
         $self->destinationSrc = $destinationSrc;
+        $self->arrData = array(static::ARR_DATA_REPLACEMENTS_KEY => array(), static::ARR_DATA_CLONE_KEY => array());
+
         return $self;
     }
 
     /**
-     * @param string $key
-     * @param $value
+     * @param string $search
+     * @param string $replace
      * @param array $options
      */
-    public function replace(string $key, $value, array $options = array())
+    public function replace(string $search, $replace = '', array $options = array()): void
     {
-        if (!is_array($this->arrData))
-        {
-            $this->arrData = [];
-        }
-
-        foreach ($this->arrData as $k => $v)
-        {
-            if ($v['key'] === $key)
-            {
-                $this->arrData[$k]['value'] = $value;
-                $this->arrData[$k]['options'] = $options;
-                return;
-            }
-        }
-        $this->arrData[] = array(
-            'key'     => $key,
-            'value'   => $value,
+        $this->arrData[static::ARR_DATA_REPLACEMENTS_KEY][$search] = array(
+            'search'  => $search,
+            'replace' => $replace,
             'options' => $options
         );
     }
@@ -114,7 +112,7 @@ class MsWordTemplateProcessor extends TemplateProcessor
      * @param string $path
      * @param array $arrOptions
      */
-    public function replaceWithImage(string $search, string $path, array $arrOptions)
+    public function replaceWithImage(string $search, string $path = '', array $arrOptions)
     {
         if (!is_file($this->rootDir . '/' . $path))
         {
@@ -149,23 +147,10 @@ class MsWordTemplateProcessor extends TemplateProcessor
      * Generate a new clone
      * @param string $cloneKey
      */
-    public function createClone(string $cloneKey)
+    public function createClone(string $cloneKey): void
     {
-        // Check if clone already exists
-        foreach ($this->arrData as $k => $v)
-        {
-            if ($this->arrData[$k]['clone'] === $cloneKey)
-            {
-                // Push new row
-                $this->arrData[$k]['rows'][] = array();
-                return;
-            }
-        }
         // Create new clone and push new row
-        $this->arrData[] = array(
-            'clone' => $cloneKey,
-            'rows'  => array(array())
-        );
+        $this->arrData[static::ARR_DATA_CLONE_KEY][$cloneKey][] = array();
     }
 
     /**
@@ -175,19 +160,12 @@ class MsWordTemplateProcessor extends TemplateProcessor
      * @param $replace
      * @param $options
      */
-    public function addToClone(string $cloneKey, $search, $replace, $options)
+    public function addToClone(string $cloneKey, $search, $replace = '', $options): void
     {
-        // Check if clone already exists
-        foreach ($this->arrData as $k => $v)
+        if (is_array($this->arrData[static::ARR_DATA_CLONE_KEY][$cloneKey]))
         {
-            if ($this->arrData[$k]['clone'] === $cloneKey)
-            {
-                if (is_array($this->arrData[$k]['rows']))
-                {
-                    $i = count($this->arrData[$k]['rows']) - 1;
-                    $this->arrData[$k]['rows'][$i][] = array('key' => $search, 'value' => $replace, 'options' => $options);
-                }
-            }
+            $i = count($this->arrData[static::ARR_DATA_CLONE_KEY][$cloneKey]) - 1;
+            $this->arrData[static::ARR_DATA_CLONE_KEY][$cloneKey][$i][$search] = array('search' => $search, 'replace' => $replace, 'options' => $options);
         }
     }
 
@@ -219,85 +197,86 @@ class MsWordTemplateProcessor extends TemplateProcessor
         // Create docx file if it can not be found in the cache or if $this->generateUncached is set to true
         if (!is_file($this->rootDir . '/' . $this->destinationSrc) || $this->generateUncached === true)
         {
-            // Process $this->arrData and replace the template vars
-            foreach ($this->arrData as $aData)
+            // Process $this->arrData[static::ARR_DATA_CLONE_KEY] and replace the template vars
+            foreach ($this->arrData[static::ARR_DATA_CLONE_KEY] as $cloneKey => $arrClones)
             {
-                if (isset($aData['clone']) && !empty($aData['clone']))
+                $countClones = count($arrClones);
+                if ($countClones > 0)
                 {
                     // Clone rows
-                    if (count($aData['rows']) > 0)
+                    $this->cloneRow($cloneKey, $countClones);
+
+                    $cloneIndex = 0;
+                    foreach ($arrClones as $arrData)
                     {
-                        $this->cloneRow($aData['clone'], count($aData['rows']));
+                        $cloneIndex++;
 
-                        $row = 0;
-                        foreach ($aData['rows'] as $key => $arrRow)
+                        foreach ($arrData as $search => $replace)
                         {
-                            $row = $key + 1;
-                            foreach ($arrRow as $arrRowData)
+                            // If multiline
+                            if (isset($replace['options']['multiline']) && !empty($replace['options']['multiline']))
                             {
-                                // If multiline
-                                if (isset($arrRowData['options']['multiline']) && !empty($arrRowData['options']['multiline']))
+                                if ($replace['options']['multiline'] === true)
                                 {
-                                    if ($arrRowData['options']['multiline'] === true)
-                                    {
-                                        $arrRowData['value'] = static::formatMultilineText($arrRowData['value']);
-                                    }
+                                    $replace['replace'] = static::formatMultilineText($replace['replace']);
                                 }
+                            }
 
-                                // If maximum replacement limit
-                                if (!isset($arrRowData['options']['limit']))
-                                {
-                                    $arrRowData['options']['limit'] = static::MAXIMUM_REPLACEMENTS_DEFAULT;
-                                }
+                            // If maximum replacement limit
+                            if (!isset($replace['options']['limit']))
+                            {
+                                $replace['options']['limit'] = static::MAXIMUM_REPLACEMENTS_DEFAULT;
+                            }
 
-                                // Add image
-                                if (isset($arrRowData['value']) && $arrRowData['options']['type'] === 'image')
+                            // Add image
+                            if (isset($replace['replace']) && $replace['options']['type'] === 'image')
+                            {
+                                if (is_file($this->rootDir . '/' . $replace['replace']))
                                 {
-                                    if (is_file($this->rootDir . '/' . $arrRowData['value']))
+                                    $arrImg = array(
+                                        'path'   => $this->rootDir . '/' . $replace['replace'],
+                                        'height' => '',
+                                        'width'  => ''
+                                    );
+                                    if (isset($replace['options']['width']) && $replace['options']['width'] != '')
                                     {
-                                        $arrImg = array(
-                                            'path'   => $this->rootDir . '/' . $arrRowData['value'],
-                                            'height' => '',
-                                            'width'  => ''
-                                        );
-                                        if (isset($arrRowData['options']['width']) && $arrRowData['options']['width'] != '')
-                                        {
-                                            $arrImg['width'] = $arrRowData['options']['width'];
-                                        }
-                                        elseif (isset($arrRowData['options']['height']) && $arrRowData['options']['height'] != '')
-                                        {
-                                            $arrImg['height'] = $arrRowData['options']['height'];
-                                        }
-                                        $this->setImageValue($arrRowData['key'] . '#' . $row, $arrImg, $arrRowData['options']['limit']);
+                                        $arrImg['width'] = $replace['options']['width'];
                                     }
+                                    elseif (isset($replace['options']['height']) && $replace['options']['height'] != '')
+                                    {
+                                        $arrImg['height'] = $replace['options']['height'];
+                                    }
+                                    $this->setImageValue($replace['search'] . '#' . $cloneIndex, $arrImg, $replace['options']['limit']);
                                 }
-                                else // Add text
-                                {
-                                    $this->setValue($arrRowData['key'] . '#' . $row, $arrRowData['value'], $arrRowData['options']['limit']);
-                                }
+                            }
+                            else // Add text
+                            {
+                                $this->setValue($replace['search'] . '#' . $cloneIndex, $replace['replace'], $replace['options']['limit']);
                             }
                         }
                     }
                 }
-                else
+            }
+
+            // Process $this->arrData[static::ARR_DATA_REPLACEMENTS_KEY] and replace the template vars
+            foreach ($this->arrData[static::ARR_DATA_REPLACEMENTS_KEY] as $search => $replace)
+            {
+                // If multiline
+                if (isset($replace['options']['multiline']) && !empty($replace['options']['multiline']))
                 {
-                    // If multiline
-                    if (isset($aData['options']['multiline']) && !empty($aData['options']['multiline']))
+                    if ($replace['options']['multiline'] === true)
                     {
-                        if ($aData['options']['multiline'] === true)
-                        {
-                            $aData['value'] = static::formatMultilineText($aData['value']);
-                        }
+                        $replace['replace'] = static::formatMultilineText($replace['replace']);
                     }
-
-                    // If maximum replacement limit
-                    if (!isset($aData['options']['limit']))
-                    {
-                        $aData['options']['limit'] = static::MAXIMUM_REPLACEMENTS_DEFAULT;
-                    }
-
-                    $this->setValue($aData['key'], $aData['value'], $aData['options']['limit']);
                 }
+
+                // If maximum replacement limit
+                if (!isset($replace['options']['limit']))
+                {
+                    $replace['options']['limit'] = static::MAXIMUM_REPLACEMENTS_DEFAULT;
+                }
+
+                $this->setValue($replace['search'], $replace['replace'], $replace['options']['limit']);
             }
 
             $this->saveAs($this->rootDir . '/' . $this->destinationSrc);
@@ -305,8 +284,8 @@ class MsWordTemplateProcessor extends TemplateProcessor
 
         if ($this->sendToBrowser)
         {
-            $objDocx = new File($this->destinationSrc);
-            $objDocx->sendToBrowser();
+            $objFile = new File($this->destinationSrc);
+            $objFile->sendToBrowser();
         }
     }
 

@@ -146,51 +146,49 @@ class MsWordTemplateProcessor extends TemplateProcessor
     }
 
     /**
+     * Generate a new clone
      * @param string $cloneKey
-     * @param array $arrData
      */
-    public function replaceAndClone(string $cloneKey, array $arrData)
+    public function createClone(string $cloneKey)
     {
-        if (empty($arrData))
-        {
-            return;
-        }
-
-        // Create new helper array
-        $aData = array();
-
-        foreach ($arrData as $arrRow)
-        {
-            if (!isset($arrRow[0]) || !isset($arrRow[1]))
-            {
-                continue;
-            }
-            $options = (isset($arrRow[2]) && is_array($arrRow[2])) ? $arrRow[2] : array();
-            $aData[] = array(
-                'key'     => $arrRow[0],
-                'value'   => $arrRow[1],
-                'options' => $options
-            );
-        }
-
-        if (!is_array($this->arrData))
-        {
-            $this->arrData = [];
-        }
-
+        // Check if clone already exists
         foreach ($this->arrData as $k => $v)
         {
             if ($this->arrData[$k]['clone'] === $cloneKey)
             {
-                $this->arrData[$k]['rows'][] = $aData;
+                // Push new row
+                $this->arrData[$k]['rows'][] = array();
                 return;
             }
         }
-
+        // Create new clone and push new row
         $this->arrData[] = array(
             'clone' => $cloneKey,
-            'rows'  => array($aData)
+            'rows'  => array(array())
         );
+    }
+
+    /**
+     * To add data to a clone, you have to call first $this->createClone('cloneKey')
+     * @param string $cloneKey
+     * @param $search
+     * @param $replace
+     * @param $options
+     */
+    public function addToClone(string $cloneKey, $search, $replace, $options)
+    {
+        // Check if clone already exists
+        foreach ($this->arrData as $k => $v)
+        {
+            if ($this->arrData[$k]['clone'] === $cloneKey)
+            {
+                if (is_array($this->arrData[$k]['rows']))
+                {
+                    $i = count($this->arrData[$k]['rows']) - 1;
+                    $this->arrData[$k]['rows'][$i][] = array('key' => $search, 'value' => $replace, 'options' => $options);
+                }
+            }
+        }
     }
 
     /**

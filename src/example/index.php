@@ -1,17 +1,7 @@
-# PHPOffice Bundle
-
-## MsWordTemplateProcessor
-#### Generate easily Microsoft Word documents:
-
-Watch the [demo template](https://github.com/markocupic/phpoffice-bundle/blob/master/src/example/templates/msword_template.docx)
-and the [result](https://github.com/markocupic/phpoffice-bundle/blob/master/src/example/results/msword_result.docx)
-
-
-```php
 <?php
 
 // Create phpword instance
-$objPhpWord = new Markocupic\PhpOffice\PhpWord\MsWordTemplateProcessor('vendor/markocupic/phpoffice-bundle/src/example/templates/msword_template.docx', 'system/tmp/msword_result.docx');
+$objPhpWord = new Markocupic\PhpOffice\PhpWord\MsWordTemplateProcessor('vendor/markocupic/phpoffice-bundle/src/example/templates/ms_word_template.docx', 'system/tmp/result.docx');
 
 // Options defaults
 //$optionsDefaults = array(
@@ -58,7 +48,3 @@ $objPhpWord->addToClone('rank', 'avatar', 'vendor/markocupic/phpoffice-bundle/sr
 $objPhpWord->sendToBrowser(true)
     ->generateUncached(true)
     ->generate();
-
-```
-
-

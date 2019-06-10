@@ -65,13 +65,13 @@ class MsWordTemplateProcessor extends TemplateProcessor
     protected $rootDir;
 
     /**
+     * MsWordTemplateProcessor constructor.
      * @param string $templSrc
      * @param string $destinationSrc
-     * @return GenerateDocxFromTemplate
      * @throws \PhpOffice\PhpWord\Exception\CopyFileException
      * @throws \PhpOffice\PhpWord\Exception\CreateTemporaryFileException
      */
-    public static function create(string $templSrc, string $destinationSrc = ''): self
+    public function __construct(string $templSrc, string $destinationSrc = '')
     {
         if ($destinationSrc === '')
         {
@@ -84,13 +84,12 @@ class MsWordTemplateProcessor extends TemplateProcessor
             throw new FileNotFoundException(sprintf('Template file "%s" not found.', $templSrc));
         }
 
-        $self = new static($rootDir . '/' . $templSrc);
-        $self->rootDir = $rootDir;
-        $self->templSrc = $templSrc;
-        $self->destinationSrc = $destinationSrc;
-        $self->arrData = array(static::ARR_DATA_REPLACEMENTS_KEY => array(), static::ARR_DATA_CLONE_KEY => array());
+        $this->rootDir = $rootDir;
+        $this->templSrc = $templSrc;
+        $this->destinationSrc = $destinationSrc;
+        $this->arrData = array(static::ARR_DATA_REPLACEMENTS_KEY => array(), static::ARR_DATA_CLONE_KEY => array());
 
-        return $self;
+        return parent::__construct($rootDir . '/' . $templSrc);
     }
 
     /**
@@ -218,7 +217,7 @@ class MsWordTemplateProcessor extends TemplateProcessor
                             {
                                 if ($replace['options']['multiline'] === true)
                                 {
-                                    $replace['replace'] = static::formatMultilineText($replace['replace']);
+                                    $replace['replace'] = $this->formatMultilineText($replace['replace']);
                                 }
                             }
 
@@ -266,7 +265,7 @@ class MsWordTemplateProcessor extends TemplateProcessor
                 {
                     if ($replace['options']['multiline'] === true)
                     {
-                        $replace['replace'] = static::formatMultilineText($replace['replace']);
+                        $replace['replace'] = $this->formatMultilineText($replace['replace']);
                     }
                 }
 
@@ -293,7 +292,7 @@ class MsWordTemplateProcessor extends TemplateProcessor
      * @param $text
      * @return mixed|string
      */
-    protected static function formatMultilineText($text): string
+    protected function formatMultilineText($text): string
     {
         $text = htmlspecialchars(html_entity_decode($text));
         $text = preg_replace('~\R~u', '</w:t><w:br/><w:t>', $text);

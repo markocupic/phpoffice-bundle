@@ -48,7 +48,8 @@ $objPhpWord->addToClone('rank', 'time', '01:25:55', array('multiline' => false))
 $objPhpWord->addToClone('rank', 'my_image', 'files/image2.jpg', array('type' => 'image', 'width' => '70mm'));
 
 // Push third datarecord, etc...
-$row = array(/** **/);
+$objPhpWord->createClone('rank');
+// .... etc.
 
 // Create & send file to browser
 $objPhpWord->sendToBrowser(true)

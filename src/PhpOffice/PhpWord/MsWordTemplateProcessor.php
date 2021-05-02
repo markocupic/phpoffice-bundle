@@ -101,7 +101,7 @@ class MsWordTemplateProcessor extends TemplateProcessor
     {
         $this->arrData[static::ARR_DATA_REPLACEMENTS_KEY][$search] = array(
             'search'  => $search,
-            'replace' => $replace,
+            'replace' => (string) $replace,
             'options' => $options
         );
     }

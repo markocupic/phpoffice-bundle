@@ -228,7 +228,7 @@ class MsWordTemplateProcessor extends TemplateProcessor
                             }
 
                             // Add image
-                            if (isset($replace['replace']) && $replace['options']['type'] === 'image')
+                            if (isset($replace['replace']['type']) && $replace['options']['type'] === 'image')
                             {
                                 if (is_file($this->rootDir . '/' . $replace['replace']))
                                 {

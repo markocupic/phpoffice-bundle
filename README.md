@@ -3,8 +3,8 @@
 ## MsWordTemplateProcessor
 #### Generate easily Microsoft Word documents:
 
-Watch the [demo template](https://github.com/markocupic/phpfoffice-bundle/blob/master/src/example/templates/ms_word_template.docx)
-and the [result](https://github.com/markocupic/phpfoffice-bundle/blob/master/src/example/results/msword_result.docx)
+Watch the [demo template](https://github.com/markocupic/phpfoffice-bundle/blob/master/docs/example/templates/ms_word_template.docx)
+and the [result](https://github.com/markocupic/phpfoffice-bundle/blob/master/docs/example/results/msword_result.docx)
 
 
 ```php
@@ -55,7 +55,7 @@ $objPhpWord->addToClone('rank', 'avatar', 'vendor/markocupic/phpoffice-bundle/sr
 // .... etc.
 
 // Create & send file to browser
-$objPhpWord->sendToBrowser(true)
+$objPhpWord->sendToBrowser(true,true)
     ->generateUncached(true)
     ->generate();
 

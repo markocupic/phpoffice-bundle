@@ -74,16 +74,16 @@ class MsWordTemplateProcessor extends TemplateProcessor
         return parent::__construct($rootDir.'/'.$templSrc);
     }
 
-    public function replace(string $search, string $replace = '', array $options = []): void
+    public function replace(string $search, $replace = '', array $options = []): void
     {
         $this->arrData[static::ARR_DATA_REPLACEMENTS_KEY][$search] = [
-            'search' => $search,
+            'search' => (string) $search,
             'replace' => (string) $replace,
             'options' => $options,
         ];
     }
 
-    public function replaceWithImage(string $search, string $path = '', array $options = []): void
+    public function replaceWithImage(string $search, $path = '', array $options = []): void
     {
         if (!is_file($this->rootDir.'/'.$path)) {
             return;

@@ -21,7 +21,7 @@
   },
   "require": {
     "php": "^7.4||^8.0",
-    "contao/core-bundle": "^4.12",
+    "contao/core-bundle": "^4.13",
     "phpoffice/phpword": "^0.18"
   },
   "autoload": {

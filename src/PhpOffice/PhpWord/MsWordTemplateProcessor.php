@@ -16,7 +16,6 @@ namespace Markocupic\PhpOffice\PhpWord;
 
 use Contao\CoreBundle\Exception\ResponseException;
 use Contao\System;
-use Patchwork\Utf8;
 use PhpOffice\PhpWord\Exception\CopyFileException;
 use PhpOffice\PhpWord\Exception\CreateTemporaryFileException;
 use PhpOffice\PhpWord\TemplateProcessor;

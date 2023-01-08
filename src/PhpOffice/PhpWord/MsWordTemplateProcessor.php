@@ -5,7 +5,7 @@ declare(strict_types=1);
 /*
  * This file is part of Php Office Bundle.
  *
- * (c) Marko Cupic 2022 <m.cupic@gmx.ch>
+ * (c) Marko Cupic 2023 <m.cupic@gmx.ch>
  * @license GPL-3.0-or-later
  * For the full copyright and license information,
  * please view the LICENSE file that was distributed with this source code.
@@ -14,13 +14,13 @@ declare(strict_types=1);
 
 namespace Markocupic\PhpOffice\PhpWord;
 
-use Contao\CoreBundle\Exception\ResponseException;
 use Contao\System;
 use PhpOffice\PhpWord\Exception\CopyFileException;
 use PhpOffice\PhpWord\Exception\CreateTemporaryFileException;
 use PhpOffice\PhpWord\TemplateProcessor;
 use Symfony\Component\Filesystem\Exception\FileNotFoundException;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 use Symfony\Component\Mime\MimeTypes;
 use Symfony\Component\String\UnicodeString;
@@ -31,22 +31,14 @@ use Symfony\Component\String\UnicodeString;
 class MsWordTemplateProcessor extends TemplateProcessor
 {
     public const ARR_DATA_CLONE_KEY = 'ARR_CLONES';
-
     public const ARR_DATA_REPLACEMENTS_KEY = 'ARR_REPLACEMENTS';
-
     protected string $templSrc;
-
     protected string $destinationSrc;
-
     protected array $arrData = [];
-
     protected bool $sendToBrowser = false;
-
     protected bool $sendToBrowserInline = false;
-
     protected bool $generateUncached = false;
-
-    protected ?string $rootDir;
+    protected string|null $rootDir;
 
     /**
      * MsWordTemplateProcessor constructor.
@@ -155,7 +147,7 @@ class MsWordTemplateProcessor extends TemplateProcessor
     /**
      * Generate the file.
      */
-    public function generate(): void
+    public function generate(): Response|null
     {
         // Create docx file if it can not be found in the cache or if $this->generateUncached is set to true
         if (!is_file($this->rootDir.'/'.$this->destinationSrc) || true === $this->generateUncached) {
@@ -231,8 +223,11 @@ class MsWordTemplateProcessor extends TemplateProcessor
 
         if ($this->sendToBrowser) {
             $fileName = basename($this->destinationSrc);
-            $this->binaryFileDownload($this->rootDir.'/'.$this->destinationSrc, $fileName, $this->sendToBrowserInline);
+
+            return $this->binaryFileDownload($this->rootDir.'/'.$this->destinationSrc, $fileName, $this->sendToBrowserInline);
         }
+
+        return null;
     }
 
     /**
@@ -274,7 +269,7 @@ class MsWordTemplateProcessor extends TemplateProcessor
         return preg_replace('~\R~u', '</w:t><w:br/><w:t>', $text);
     }
 
-    protected function binaryFileDownload(string $filePath, string $filename = '', bool $inline = false): void
+    protected function binaryFileDownload(string $filePath, string $filename = '', bool $inline = false): Response
     {
         $response = new BinaryFileResponse($filePath);
         $response->setPrivate(); // public by default
@@ -293,6 +288,6 @@ class MsWordTemplateProcessor extends TemplateProcessor
         $response->headers->set('Connection', 'close');
         $response->headers->set('Content-Type', $mimeType);
 
-        throw new ResponseException($response);
+        return $response->send();
     }
 }

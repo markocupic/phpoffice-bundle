@@ -165,10 +165,15 @@ class MsWordTemplateProcessor extends TemplateProcessor
                         ++$cloneIndex;
 
                         foreach ($arrData as $replace) {
+                            $replace['replace'] = htmlspecialchars(html_entity_decode((string) $replace['replace']));
+
+                            // Format bold text (replace <B> & </B>)
+                            $replace['replace'] = $this->formatBoldText((string) $replace['replace']);
+
                             // If multiline
                             if (isset($replace['options']['multiline']) && !empty($replace['options']['multiline'])) {
                                 if (true === $replace['options']['multiline']) {
-                                    $replace['replace'] = $this->formatMultilineText($replace['replace']);
+                                    $replace['replace'] = $this->formatMultilineText((string) $replace['replace']);
                                 }
                             }
 
@@ -203,10 +208,15 @@ class MsWordTemplateProcessor extends TemplateProcessor
 
             // Process $this->arrData[static::ARR_DATA_REPLACEMENTS_KEY] and replace the template vars
             foreach ($this->arrData[static::ARR_DATA_REPLACEMENTS_KEY] as $replace) {
+                $replace['replace'] = htmlspecialchars(html_entity_decode((string) $replace['replace']));
+
+                // Format bold text (replace <B> & </B>)
+                $replace['replace'] = $this->formatBoldText((string) $replace['replace']);
+
                 // If multiline
                 if (isset($replace['options']['multiline']) && !empty($replace['options']['multiline'])) {
                     if (true === $replace['options']['multiline']) {
-                        $replace['replace'] = $this->formatMultilineText($replace['replace']);
+                        $replace['replace'] = $this->formatMultilineText((string) $replace['replace']);
                     }
                 }
 
@@ -258,14 +268,30 @@ class MsWordTemplateProcessor extends TemplateProcessor
     }
 
     /**
+     * Convert chars between <B> and </B> to bold text.
+     */
+    protected function formatBoldText(string $text): string
+    {
+        return str_replace(
+            [
+                '&lt;B&gt;',
+                '&lt;/B&gt;',
+            ],
+            [
+                '</w:t></w:r><w:r><w:rPr><w:b/></w:rPr><w:t xml:space="preserve">',
+                '</w:t></w:r><w:r><w:t xml:space="preserve">',
+            ],
+            $text
+        );
+    }
+
+    /**
      * @param $text
      *
      * @return mixed|string
      */
     protected function formatMultilineText(string $text): string
     {
-        $text = htmlspecialchars(html_entity_decode($text));
-
         return preg_replace('~\R~u', '</w:t><w:br/><w:t>', $text);
     }
 

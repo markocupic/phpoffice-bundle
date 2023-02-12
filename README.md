@@ -26,6 +26,9 @@ $objPhpWord->replace('category', 'Elite men');
 $options = array('multiline' => true);
 $objPhpWord->replace('sometext', 'Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt', $options);
 
+// Bold text
+$objPhpWord->replace('sometext', '<B>Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt</B>', $options);
+
 // Image replacement
 $objPhpWord->replaceWithImage('my-best-image', 'vendor/markocupic/phpoffice-bundle/src/example/assets/my-best-image.jpg', array('width' => '160mm'));
 

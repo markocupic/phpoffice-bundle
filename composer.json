@@ -1,38 +1,38 @@
 {
-  "name": "markocupic/phpoffice-bundle",
-  "description": "PhpOffice helper classes",
-  "keywords": [
-    "docx",
-    "template processor helper"
-  ],
-  "type": "contao-bundle",
-  "license": "LGPL-3.0+",
-  "authors": [
-    {
-      "name": "Marko Cupic",
-      "email": "m.cupic@gmx.ch",
-      "homepage": "https://github.com/markocupic",
-      "role": "Developer"
-    }
-  ],
-  "support": {
-    "issues": "https://github.com/markocupic/phpoffice-bundle/issues",
-    "source": "https://github.com/markocupic/phpoffice-bundle"
-  },
-  "require": {
-    "php": "^7.4 || ^8.0",
-    "contao/core-bundle": "^4.13 || ^5.0",
-    "phpoffice/phpword": "^0.18"
-  },
-  "autoload": {
-    "psr-4": {
-      "Markocupic\\PhpOfficeBundle\\": "src/"
+    "name": "markocupic/phpoffice-bundle",
+    "description": "PhpOffice helper classes",
+    "keywords": [
+        "docx",
+        "template processor helper"
+    ],
+    "type": "contao-bundle",
+    "license": "LGPL-3.0+",
+    "authors": [
+        {
+            "name": "Marko Cupic",
+            "email": "m.cupic@gmx.ch",
+            "homepage": "https://github.com/markocupic",
+            "role": "Developer"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/markocupic/phpoffice-bundle/issues",
+        "source": "https://github.com/markocupic/phpoffice-bundle"
     },
-    "classmap": [
-      "src/PhpOffice"
-    ]
-  },
-  "extra": {
-    "contao-manager-plugin": "Markocupic\\PhpOfficeBundle\\ContaoManager\\Plugin"
-  }
+    "require": {
+        "php": "^7.4 || ^8.0",
+        "contao/core-bundle": "^4.13 || ^5.0",
+        "phpoffice/phpword": "^1.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Markocupic\\PhpOfficeBundle\\": "src/"
+        },
+        "classmap": [
+            "src/PhpOffice"
+        ]
+    },
+    "extra": {
+        "contao-manager-plugin": "Markocupic\\PhpOfficeBundle\\ContaoManager\\Plugin"
+    }
 }

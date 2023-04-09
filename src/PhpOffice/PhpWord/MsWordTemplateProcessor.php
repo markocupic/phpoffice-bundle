@@ -19,6 +19,7 @@ use PhpOffice\PhpWord\Exception\CopyFileException;
 use PhpOffice\PhpWord\Exception\CreateTemporaryFileException;
 use PhpOffice\PhpWord\TemplateProcessor;
 use Symfony\Component\Filesystem\Exception\FileNotFoundException;
+use Symfony\Component\Filesystem\Path;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\ResponseHeaderBag;
@@ -38,32 +39,33 @@ class MsWordTemplateProcessor extends TemplateProcessor
     protected bool $sendToBrowser = false;
     protected bool $sendToBrowserInline = false;
     protected bool $generateUncached = false;
-    protected string|null $rootDir;
+    protected string|null $projectDir;
 
     /**
-     * MsWordTemplateProcessor constructor.
-     *
      * @throws CopyFileException
      * @throws CreateTemporaryFileException
      */
     public function __construct(string $templSrc, string $destinationSrc = '')
     {
+        $this->projectDir = System::getContainer()->getParameter('kernel.project_dir');
+
         if ('' === $destinationSrc) {
-            $destinationSrc = sprintf('system/tmp/%s.docx', md5(microtime()).random_int(1000000, 9999999));
+            $destinationSrc = sprintf(
+                sys_get_temp_dir().'/%s.docx',
+                md5(microtime()).random_int(1000000, 9999999),
+            );
         }
 
-        $rootDir = System::getContainer()->getParameter('kernel.project_dir');
+        $this->destinationSrc = Path::makeAbsolute($destinationSrc, $this->projectDir);
+        $this->templSrc = Path::makeAbsolute($templSrc, $this->projectDir);
 
-        if (!file_exists($rootDir.'/'.$templSrc)) {
-            throw new FileNotFoundException(sprintf('Template file "%s" not found.', $templSrc));
+        if (!file_exists($this->templSrc)) {
+            throw new FileNotFoundException(sprintf('Template file "%s" not found.', $this->templSrc));
         }
 
-        $this->rootDir = $rootDir;
-        $this->templSrc = $templSrc;
-        $this->destinationSrc = $destinationSrc;
         $this->arrData = [static::ARR_DATA_REPLACEMENTS_KEY => [], static::ARR_DATA_CLONE_KEY => []];
 
-        return parent::__construct($rootDir.'/'.$templSrc);
+        return parent::__construct($this->templSrc);
     }
 
     public function replace(string $search, $replace = '', array $options = []): void
@@ -77,12 +79,13 @@ class MsWordTemplateProcessor extends TemplateProcessor
 
     public function replaceWithImage(string $search, $path = '', array $options = []): void
     {
-        if (!is_file($this->rootDir.'/'.$path)) {
+        $path = Path::makeAbsolute($path,$this->projectDir);
+        if (!is_file($path)) {
             return;
         }
 
         $arrImage = [
-            'path' => $this->rootDir.'/'.$path,
+            'path' => $path,
         ];
 
         if (isset($options['width']) && '' !== $options['width']) {
@@ -150,7 +153,7 @@ class MsWordTemplateProcessor extends TemplateProcessor
     public function generate(): Response|null
     {
         // Create docx file if it can not be found in the cache or if $this->generateUncached is set to true
-        if (!is_file($this->rootDir.'/'.$this->destinationSrc) || true === $this->generateUncached) {
+        if (!is_file($this->destinationSrc) || true === $this->generateUncached) {
             // Process $this->arrData[static::ARR_DATA_CLONE_KEY] and replace the template vars
             foreach ($this->arrData[static::ARR_DATA_CLONE_KEY] as $cloneKey => $arrClones) {
                 $countClones = \count($arrClones);
@@ -184,9 +187,9 @@ class MsWordTemplateProcessor extends TemplateProcessor
 
                             // Add image
                             if (isset($replace['replace']['type']) && 'image' === $replace['options']['type']) {
-                                if (is_file($this->rootDir.'/'.$replace['replace'])) {
+                                if (is_file($this->projectDir.'/'.$replace['replace'])) {
                                     $arrImg = [
-                                        'path' => $this->rootDir.'/'.$replace['replace'],
+                                        'path' => $this->projectDir.'/'.$replace['replace'],
                                         'height' => '',
                                         'width' => '',
                                     ];
@@ -228,13 +231,13 @@ class MsWordTemplateProcessor extends TemplateProcessor
                 $this->setValue($replace['search'], $replace['replace'], $replace['options']['limit']);
             }
 
-            $this->saveAs($this->rootDir.'/'.$this->destinationSrc);
+            $this->saveAs($this->destinationSrc);
         }
 
         if ($this->sendToBrowser) {
             $fileName = basename($this->destinationSrc);
 
-            return $this->binaryFileDownload($this->rootDir.'/'.$this->destinationSrc, $fileName, $this->sendToBrowserInline);
+            return $this->binaryFileDownload($this->destinationSrc, $fileName, $this->sendToBrowserInline);
         }
 
         return null;

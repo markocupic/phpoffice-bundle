@@ -79,7 +79,8 @@ class MsWordTemplateProcessor extends TemplateProcessor
 
     public function replaceWithImage(string $search, $path = '', array $options = []): void
     {
-        $path = Path::makeAbsolute($path,$this->projectDir);
+        $path = Path::makeAbsolute($path, $this->projectDir);
+
         if (!is_file($path)) {
             return;
         }
@@ -268,6 +269,11 @@ class MsWordTemplateProcessor extends TemplateProcessor
                 $this->tempDocumentMainPart
             );
         }
+    }
+
+    public function getData(): array
+    {
+        return $this->arrData;
     }
 
     /**

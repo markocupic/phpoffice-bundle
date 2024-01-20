@@ -57,10 +57,8 @@ $objPhpWord->addToClone('rank', 'avatar', 'vendor/markocupic/phpoffice-bundle/sr
 //$objPhpWord->createClone('rank');
 // .... etc.
 
-// Create & send file to browser
-$objPhpWord->sendToBrowser(true,true)
-    ->generateUncached(true)
-    ->generate();
+// Create
+$objPhpWord->generate();
 
 ```
 

@@ -20,7 +20,7 @@
         "source": "https://github.com/markocupic/phpoffice-bundle"
     },
     "require": {
-        "php": "^7.4 || ^8.0",
+        "php": "^8.1",
         "contao/core-bundle": "^4.13 || ^5.0",
         "phpoffice/phpword": "^1.0"
     },

@@ -5,7 +5,7 @@ declare(strict_types=1);
 /*
  * This file is part of Php Office Bundle.
  *
- * (c) Marko Cupic 2023 <m.cupic@gmx.ch>
+ * (c) Marko Cupic 2024 <m.cupic@gmx.ch>
  * @license GPL-3.0-or-later
  * For the full copyright and license information,
  * please view the LICENSE file that was distributed with this source code.
@@ -14,21 +14,11 @@ declare(strict_types=1);
 
 namespace Markocupic\PhpOffice\PhpWord;
 
-use Contao\System;
-use PhpOffice\PhpWord\Exception\CopyFileException;
-use PhpOffice\PhpWord\Exception\CreateTemporaryFileException;
 use PhpOffice\PhpWord\TemplateProcessor;
 use Symfony\Component\Filesystem\Exception\FileNotFoundException;
+use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Filesystem\Path;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
-use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpFoundation\ResponseHeaderBag;
-use Symfony\Component\Mime\MimeTypes;
-use Symfony\Component\String\UnicodeString;
 
-/**
- * @see README.md for usage explanations
- */
 class MsWordTemplateProcessor extends TemplateProcessor
 {
     public const ARR_DATA_CLONE_KEY = 'ARR_CLONES';
@@ -36,18 +26,14 @@ class MsWordTemplateProcessor extends TemplateProcessor
     protected string $templSrc;
     protected string $destinationSrc;
     protected array $arrData = [];
-    protected bool $sendToBrowser = false;
-    protected bool $sendToBrowserInline = false;
-    protected bool $generateUncached = false;
-    protected string|null $projectDir;
+    protected string $projectDir;
 
-    /**
-     * @throws CopyFileException
-     * @throws CreateTemporaryFileException
-     */
     public function __construct(string $templSrc, string $destinationSrc = '')
     {
-        $this->projectDir = System::getContainer()->getParameter('kernel.project_dir');
+        $templSrc = Path::canonicalize($templSrc);
+        $this->templSrc = $templSrc;
+
+        $destinationSrc = Path::canonicalize($destinationSrc);
 
         if ('' === $destinationSrc) {
             $destinationSrc = sprintf(
@@ -56,10 +42,11 @@ class MsWordTemplateProcessor extends TemplateProcessor
             );
         }
 
-        $this->destinationSrc = Path::makeAbsolute($destinationSrc, $this->projectDir);
-        $this->templSrc = Path::makeAbsolute($templSrc, $this->projectDir);
+        $this->destinationSrc = $destinationSrc;
 
-        if (!file_exists($this->templSrc)) {
+        $fs = new Filesystem();
+
+        if (!$fs->exists($this->templSrc)) {
             throw new FileNotFoundException(sprintf('Template file "%s" not found.', $this->templSrc));
         }
 
@@ -71,17 +58,17 @@ class MsWordTemplateProcessor extends TemplateProcessor
     public function replace(string $search, $replace = '', array $options = []): void
     {
         $this->arrData[static::ARR_DATA_REPLACEMENTS_KEY][$search] = [
-            'search' => (string) $search,
+            'search' => $search,
             'replace' => (string) $replace,
             'options' => $options,
         ];
     }
 
-    public function replaceWithImage(string $search, $path = '', array $options = []): void
+    public function replaceWithImage(string $search, string $path = '', array $options = []): void
     {
-        $path = Path::makeAbsolute($path, $this->projectDir);
+        $fs = new Filesystem();
 
-        if (!is_file($path)) {
+        if (!$fs->exists($path)) {
             return;
         }
 
@@ -106,20 +93,13 @@ class MsWordTemplateProcessor extends TemplateProcessor
         $this->setImageValue($search, $arrImage, $limit);
     }
 
-    /**
-     * Generate a new clone.
-     */
     public function createClone(string $cloneKey): void
     {
         // Create new clone and push new row
         $this->arrData[static::ARR_DATA_CLONE_KEY][$cloneKey][] = [];
     }
 
-    /**
-     * @param string|int $search
-     * @param string|int $replace
-     */
-    public function addToClone(string $cloneKey, $search, $replace = '', array $options = []): void
+    public function addToClone(int|string $cloneKey, int|string $search, mixed $replace = '', array $options = []): void
     {
         if (\is_array($this->arrData[static::ARR_DATA_CLONE_KEY][$cloneKey])) {
             $i = \count($this->arrData[static::ARR_DATA_CLONE_KEY][$cloneKey]) - 1;
@@ -127,129 +107,103 @@ class MsWordTemplateProcessor extends TemplateProcessor
         }
     }
 
-    /**
-     * @return $this
-     */
-    public function sendToBrowser(bool $blnSendToBrowser = false, bool $blnInline = false): self
+    public function generate(): \SplFileObject
     {
-        $this->sendToBrowser = $blnSendToBrowser;
-        $this->sendToBrowserInline = $blnInline;
+        $fs = new Filesystem();
 
-        return $this;
-    }
+        if ($fs->exists($this->destinationSrc)) {
+            $fs->remove($this->destinationSrc);
+        }
 
-    /**
-     * @return $this
-     */
-    public function generateUncached(bool $blnUncached = false): self
-    {
-        $this->generateUncached = $blnUncached;
+        // Process $this->arrData[static::ARR_DATA_CLONE_KEY] and replace the template vars
+        foreach ($this->arrData[static::ARR_DATA_CLONE_KEY] as $cloneKey => $arrClones) {
+            $countClones = \count($arrClones);
 
-        return $this;
-    }
+            if ($countClones > 0) {
+                // Clone rows
+                $this->cloneRow($cloneKey, $countClones);
 
-    /**
-     * Generate the file.
-     */
-    public function generate(): Response|null
-    {
-        // Create docx file if it can not be found in the cache or if $this->generateUncached is set to true
-        if (!is_file($this->destinationSrc) || true === $this->generateUncached) {
-            // Process $this->arrData[static::ARR_DATA_CLONE_KEY] and replace the template vars
-            foreach ($this->arrData[static::ARR_DATA_CLONE_KEY] as $cloneKey => $arrClones) {
-                $countClones = \count($arrClones);
+                $cloneIndex = 0;
 
-                if ($countClones > 0) {
-                    // Clone rows
-                    $this->cloneRow($cloneKey, $countClones);
+                foreach ($arrClones as $arrData) {
+                    ++$cloneIndex;
 
-                    $cloneIndex = 0;
+                    foreach ($arrData as $replace) {
+                        $replace['replace'] = htmlspecialchars(html_entity_decode((string) $replace['replace']));
 
-                    foreach ($arrClones as $arrData) {
-                        ++$cloneIndex;
+                        // Format bold text (replace <B> & </B>)
+                        $replace['replace'] = $this->formatBoldText($replace['replace']);
 
-                        foreach ($arrData as $replace) {
-                            $replace['replace'] = htmlspecialchars(html_entity_decode((string) $replace['replace']));
+                        // If multiline
+                        if (!empty($replace['options']['multiline'])) {
+                            if (true === $replace['options']['multiline']) {
+                                $replace['replace'] = $this->formatMultilineText($replace['replace']);
+                            }
+                        }
 
-                            // Format bold text (replace <B> & </B>)
-                            $replace['replace'] = $this->formatBoldText((string) $replace['replace']);
+                        // If maximum replacement limit
+                        if (!isset($replace['options']['limit'])) {
+                            $replace['options']['limit'] = static::MAXIMUM_REPLACEMENTS_DEFAULT;
+                        }
 
-                            // If multiline
-                            if (isset($replace['options']['multiline']) && !empty($replace['options']['multiline'])) {
-                                if (true === $replace['options']['multiline']) {
-                                    $replace['replace'] = $this->formatMultilineText((string) $replace['replace']);
+                        // Add image
+                        if (isset($replace['replace']['type']) && 'image' === $replace['options']['type']) {
+                            if ($fs->exists($replace['replace'])) {
+                                $arrImg = [
+                                    'path' => $replace['replace'],
+                                    'height' => '',
+                                    'width' => '',
+                                ];
+
+                                if (isset($replace['options']['width']) && '' !== $replace['options']['width']) {
+                                    $arrImg['width'] = $replace['options']['width'];
+                                } elseif (isset($replace['options']['height']) && '' !== $replace['options']['height']) {
+                                    $arrImg['height'] = $replace['options']['height'];
                                 }
+                                $this->setImageValue($replace['search'].'#'.$cloneIndex, $arrImg, $replace['options']['limit']);
                             }
-
-                            // If maximum replacement limit
-                            if (!isset($replace['options']['limit'])) {
-                                $replace['options']['limit'] = static::MAXIMUM_REPLACEMENTS_DEFAULT;
-                            }
-
-                            // Add image
-                            if (isset($replace['replace']['type']) && 'image' === $replace['options']['type']) {
-                                if (is_file($this->projectDir.'/'.$replace['replace'])) {
-                                    $arrImg = [
-                                        'path' => $this->projectDir.'/'.$replace['replace'],
-                                        'height' => '',
-                                        'width' => '',
-                                    ];
-
-                                    if (isset($replace['options']['width']) && '' !== $replace['options']['width']) {
-                                        $arrImg['width'] = $replace['options']['width'];
-                                    } elseif (isset($replace['options']['height']) && '' !== $replace['options']['height']) {
-                                        $arrImg['height'] = $replace['options']['height'];
-                                    }
-                                    $this->setImageValue($replace['search'].'#'.$cloneIndex, $arrImg, $replace['options']['limit']);
-                                }
-                            } else { // Add text
-                                $this->setValue($replace['search'].'#'.$cloneIndex, $replace['replace'], $replace['options']['limit']);
-                            }
+                        } else { // Add text
+                            $this->setValue($replace['search'].'#'.$cloneIndex, $replace['replace'], $replace['options']['limit']);
                         }
                     }
                 }
             }
+        }
 
-            // Process $this->arrData[static::ARR_DATA_REPLACEMENTS_KEY] and replace the template vars
-            foreach ($this->arrData[static::ARR_DATA_REPLACEMENTS_KEY] as $replace) {
-                $replace['replace'] = htmlspecialchars(html_entity_decode((string) $replace['replace']));
+        // Process $this->arrData[static::ARR_DATA_REPLACEMENTS_KEY] and replace the template vars
+        foreach ($this->arrData[static::ARR_DATA_REPLACEMENTS_KEY] as $replace) {
+            $replace['replace'] = htmlspecialchars(html_entity_decode((string) $replace['replace']));
 
-                // Format bold text (replace <B> & </B>)
-                $replace['replace'] = $this->formatBoldText((string) $replace['replace']);
+            // Format bold text (replace <B> & </B>)
+            $replace['replace'] = $this->formatBoldText($replace['replace']);
 
-                // If multiline
-                if (isset($replace['options']['multiline']) && !empty($replace['options']['multiline'])) {
-                    if (true === $replace['options']['multiline']) {
-                        $replace['replace'] = $this->formatMultilineText((string) $replace['replace']);
-                    }
+            // If multiline
+            if (!empty($replace['options']['multiline'])) {
+                if (true === $replace['options']['multiline']) {
+                    $replace['replace'] = $this->formatMultilineText($replace['replace']);
                 }
-
-                // If maximum replacement limit
-                if (!isset($replace['options']['limit'])) {
-                    $replace['options']['limit'] = static::MAXIMUM_REPLACEMENTS_DEFAULT;
-                }
-
-                $this->setValue($replace['search'], $replace['replace'], $replace['options']['limit']);
             }
 
-            $this->saveAs($this->destinationSrc);
+            // If maximum replacement limit
+            if (!isset($replace['options']['limit'])) {
+                $replace['options']['limit'] = static::MAXIMUM_REPLACEMENTS_DEFAULT;
+            }
+
+            $this->setValue($replace['search'], $replace['replace'], $replace['options']['limit']);
         }
 
-        if ($this->sendToBrowser) {
-            $fileName = basename($this->destinationSrc);
+        $this->saveAs($this->destinationSrc);
 
-            return $this->binaryFileDownload($this->destinationSrc, $fileName, $this->sendToBrowserInline);
+        if (!$fs->exists($this->destinationSrc)) {
+            throw new \Exception(sprintf('Could not create "%s" from template "%s"', $this->destinationSrc, $this->templSrc));
         }
 
-        return null;
+        return new \SplFileObject($this->destinationSrc);
     }
 
     /**
      * Replace a block.
-     * Overwrite original method.
-     *
-     * @param $blockname
-     * @param $replacement
+     * Override parent method.
      */
     public function replaceBlock($blockname, $replacement): void
     {
@@ -294,35 +248,8 @@ class MsWordTemplateProcessor extends TemplateProcessor
         );
     }
 
-    /**
-     * @param $text
-     *
-     * @return mixed|string
-     */
     protected function formatMultilineText(string $text): string
     {
         return preg_replace('~\R~u', '</w:t><w:br/><w:t>', $text);
-    }
-
-    protected function binaryFileDownload(string $filePath, string $filename = '', bool $inline = false): Response
-    {
-        $response = new BinaryFileResponse($filePath);
-        $response->setPrivate(); // public by default
-        $response->setAutoEtag();
-
-        $response->setContentDisposition(
-            $inline ? ResponseHeaderBag::DISPOSITION_INLINE : ResponseHeaderBag::DISPOSITION_ATTACHMENT,
-            $filename,
-            (new UnicodeString(basename($filePath)))->ascii()->toString()
-        );
-
-        $mimeTypes = new MimeTypes();
-        $mimeType = $mimeTypes->guessMimeType($filePath);
-
-        $response->headers->addCacheControlDirective('must-revalidate');
-        $response->headers->set('Connection', 'close');
-        $response->headers->set('Content-Type', $mimeType);
-
-        return $response->send();
     }
 }

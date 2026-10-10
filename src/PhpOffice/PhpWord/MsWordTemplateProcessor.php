@@ -6,7 +6,7 @@ declare(strict_types=1);
  * This file is part of Php Office Bundle.
  *
  * (c) Marko Cupic 2024 <m.cupic@gmx.ch>
- * @license GPL-3.0-or-later
+ * @license MIT
  * For the full copyright and license information,
  * please view the LICENSE file that was distributed with this source code.
  * @link https://github.com/markocupic/phpoffice-bundle
@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 namespace Markocupic\PhpOffice\PhpWord;
 
+use Contao\StringUtil;
 use PhpOffice\PhpWord\TemplateProcessor;
 use Symfony\Component\Filesystem\Exception\FileNotFoundException;
 use Symfony\Component\Filesystem\Filesystem;
@@ -22,10 +23,15 @@ use Symfony\Component\Filesystem\Path;
 class MsWordTemplateProcessor extends TemplateProcessor
 {
     public const ARR_DATA_CLONE_KEY = 'ARR_CLONES';
+
     public const ARR_DATA_REPLACEMENTS_KEY = 'ARR_REPLACEMENTS';
+
     protected string $templSrc;
+
     protected string $destinationSrc;
+
     protected array $arrData = [];
+
     protected string $projectDir;
 
     public function __construct(string $templSrc, string $destinationSrc = '')
@@ -36,10 +42,7 @@ class MsWordTemplateProcessor extends TemplateProcessor
         $destinationSrc = Path::canonicalize($destinationSrc);
 
         if ('' === $destinationSrc) {
-            $destinationSrc = sprintf(
-                sys_get_temp_dir().'/%s.docx',
-                md5(microtime()).random_int(1000000, 9999999),
-            );
+            $destinationSrc = Path::join(sys_get_temp_dir(), bin2hex(random_bytes(16)).'.docx');
         }
 
         $this->destinationSrc = $destinationSrc;
@@ -47,12 +50,12 @@ class MsWordTemplateProcessor extends TemplateProcessor
         $fs = new Filesystem();
 
         if (!$fs->exists($this->templSrc)) {
-            throw new FileNotFoundException(sprintf('Template file "%s" not found.', $this->templSrc));
+            throw new FileNotFoundException(\sprintf('Template file "%s" not found.', $this->templSrc));
         }
 
         $this->arrData = [static::ARR_DATA_REPLACEMENTS_KEY => [], static::ARR_DATA_CLONE_KEY => []];
 
-        return parent::__construct($this->templSrc);
+        parent::__construct($this->templSrc);
     }
 
     public function replace(string $search, $replace = '', array $options = []): void
@@ -101,7 +104,7 @@ class MsWordTemplateProcessor extends TemplateProcessor
 
     public function addToClone(int|string $cloneKey, int|string $search, mixed $replace = '', array $options = []): void
     {
-        if (\is_array($this->arrData[static::ARR_DATA_CLONE_KEY][$cloneKey])) {
+        if (\is_array($this->arrData[static::ARR_DATA_CLONE_KEY][$cloneKey] ?? null)) {
             $i = \count($this->arrData[static::ARR_DATA_CLONE_KEY][$cloneKey]) - 1;
             $this->arrData[static::ARR_DATA_CLONE_KEY][$cloneKey][$i][$search] = ['search' => $search, 'replace' => $replace, 'options' => $options];
         }
@@ -129,28 +132,15 @@ class MsWordTemplateProcessor extends TemplateProcessor
                     ++$cloneIndex;
 
                     foreach ($arrData as $replace) {
-                        $replace['replace'] = htmlspecialchars(html_entity_decode((string) $replace['replace']));
-
-                        // Format bold text (replace <B> & </B>)
-                        $replace['replace'] = $this->formatBoldText($replace['replace']);
-
-                        // If multiline
-                        if (!empty($replace['options']['multiline'])) {
-                            if (true === $replace['options']['multiline']) {
-                                $replace['replace'] = $this->formatMultilineText($replace['replace']);
-                            }
-                        }
-
-                        // If maximum replacement limit
-                        if (!isset($replace['options']['limit'])) {
-                            $replace['options']['limit'] = static::MAXIMUM_REPLACEMENTS_DEFAULT;
-                        }
+                        $limit = $replace['options']['limit'] ?? static::MAXIMUM_REPLACEMENTS_DEFAULT;
 
                         // Add image
-                        if (isset($replace['replace']['type']) && 'image' === $replace['options']['type']) {
-                            if ($fs->exists($replace['replace'])) {
+                        if ('image' === ($replace['options']['type'] ?? null)) {
+                            $path = (string) $replace['replace'];
+
+                            if ($fs->exists($path)) {
                                 $arrImg = [
-                                    'path' => $replace['replace'],
+                                    'path' => $path,
                                     'height' => '',
                                     'width' => '',
                                 ];
@@ -160,67 +150,54 @@ class MsWordTemplateProcessor extends TemplateProcessor
                                 } elseif (isset($replace['options']['height']) && '' !== $replace['options']['height']) {
                                     $arrImg['height'] = $replace['options']['height'];
                                 }
-                                $this->setImageValue($replace['search'].'#'.$cloneIndex, $arrImg, $replace['options']['limit']);
+
+                                $this->setImageValue($replace['search'].'#'.$cloneIndex, $arrImg, $limit);
                             }
-                        } else { // Add text
-                            $this->setValue($replace['search'].'#'.$cloneIndex, $replace['replace'], $replace['options']['limit']);
+
+                            continue;
                         }
+
+                        // Add text
+                        $this->setValue($replace['search'].'#'.$cloneIndex, $this->prepareText((string) $replace['replace'], $replace['options']), $limit);
                     }
                 }
             }
         }
 
-        // Process $this->arrData[static::ARR_DATA_REPLACEMENTS_KEY] and replace the template vars
+        // Process $this->arrData[static::ARR_DATA_REPLACEMENTS_KEY] and replace the
+        // template vars
         foreach ($this->arrData[static::ARR_DATA_REPLACEMENTS_KEY] as $replace) {
-            $replace['replace'] = htmlspecialchars(html_entity_decode((string) $replace['replace']));
+            $limit = $replace['options']['limit'] ?? static::MAXIMUM_REPLACEMENTS_DEFAULT;
 
-            // Format bold text (replace <B> & </B>)
-            $replace['replace'] = $this->formatBoldText($replace['replace']);
-
-            // If multiline
-            if (!empty($replace['options']['multiline'])) {
-                if (true === $replace['options']['multiline']) {
-                    $replace['replace'] = $this->formatMultilineText($replace['replace']);
-                }
-            }
-
-            // If maximum replacement limit
-            if (!isset($replace['options']['limit'])) {
-                $replace['options']['limit'] = static::MAXIMUM_REPLACEMENTS_DEFAULT;
-            }
-
-            $this->setValue($replace['search'], $replace['replace'], $replace['options']['limit']);
+            $this->setValue($replace['search'], $this->prepareText((string) $replace['replace'], $replace['options']), $limit);
         }
 
         $this->saveAs($this->destinationSrc);
 
         if (!$fs->exists($this->destinationSrc)) {
-            throw new \Exception(sprintf('Could not create "%s" from template "%s"', $this->destinationSrc, $this->templSrc));
+            throw new \RuntimeException(\sprintf('Could not create "%s" from template "%s"', $this->destinationSrc, $this->templSrc));
         }
 
         return new \SplFileObject($this->destinationSrc);
     }
 
     /**
-     * Replace a block.
-     * Override parent method.
+     * Replace a block. Override parent method.
      */
     public function replaceBlock($blockname, $replacement): void
     {
-        // Original pattern
-        // '/(<\?xml.*)(<w:p.*>\${' . $blockname . '}<\/w:.*?p>)(.*)(<w:p.*\${\/' . $blockname . '}<\/w:.*?p>)/is',
         // Optimized pattern for Word 2017
         preg_match(
             '/(<\?xml.*)(<w:t.*>\${'.$blockname.'}<\/w:.*?t>)(.*)(<w:t.*\${\/'.$blockname.'}<\/w:.*?t>)/is',
             $this->tempDocumentMainPart,
-            $matches
+            $matches,
         );
 
         if (isset($matches[3])) {
             $this->tempDocumentMainPart = str_replace(
                 $matches[2].$matches[3].$matches[4],
                 $replacement,
-                $this->tempDocumentMainPart
+                $this->tempDocumentMainPart,
             );
         }
     }
@@ -228,6 +205,23 @@ class MsWordTemplateProcessor extends TemplateProcessor
     public function getData(): array
     {
         return $this->arrData;
+    }
+
+    /**
+     * Escape the text for the XML document and apply the bold and multiline formatting.
+     */
+    protected function prepareText(string $text, array $options = []): string
+    {
+        $text = StringUtil::specialchars(StringUtil::decodeEntities($text));
+
+        // Format bold text (replace <B> & </B>)
+        $text = $this->formatBoldText($text);
+
+        if (true === ($options['multiline'] ?? false)) {
+            $text = $this->formatMultilineText($text);
+        }
+
+        return $text;
     }
 
     /**
@@ -244,12 +238,12 @@ class MsWordTemplateProcessor extends TemplateProcessor
                 '</w:t></w:r><w:r><w:rPr><w:b/></w:rPr><w:t xml:space="preserve">',
                 '</w:t></w:r><w:r><w:t xml:space="preserve">',
             ],
-            $text
+            $text,
         );
     }
 
     protected function formatMultilineText(string $text): string
     {
-        return preg_replace('~\R~u', '</w:t><w:br/><w:t>', $text);
+        return preg_replace('~\R~u', '</w:t><w:br/><w:t>', $text) ?? $text;
     }
 }

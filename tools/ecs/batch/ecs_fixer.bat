@@ -6,5 +6,4 @@ cd..
 cd..
 cd..
 cd..
-vendor\bin\ecs check vendor/markocupic/phpoffice-bundle/src --fix --config vendor/markocupic/phpoffice-bundle/.ecs/config/default.php
-cd vendor/markocupic/phpoffice-bundle/.ecs./batch/fix
+php vendor\bin\ecs check --fix --config vendor/markocupic/phpoffice-bundle/tools/ecs/config/default.php

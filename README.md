@@ -1,17 +1,23 @@
 # PHPOffice Bundle
 
+## Requirements
+
+- PHP ^8.2
+- Contao ^5.3 || ^6.0
+- phpoffice/phpword ^1.0
+
 ## MsWordTemplateProcessor
 #### Generate easily Microsoft Word documents:
 
-Watch the [demo template](https://github.com/markocupic/phpfoffice-bundle/blob/master/docs/example/templates/ms_word_template.docx)
-and the [result](https://github.com/markocupic/phpfoffice-bundle/blob/master/docs/example/results/msword_result.docx)
+Watch the [demo template](https://github.com/markocupic/phpoffice-bundle/blob/master/docs/example/templates/ms_word_template.docx)
+and the [result](https://github.com/markocupic/phpoffice-bundle/blob/master/docs/example/results/msword_result.docx)
 
 
 ```php
 <?php
 
 // Create phpword instance
-$objPhpWord = new Markocupic\PhpOffice\PhpWord\MsWordTemplateProcessor('vendor/markocupic/phpoffice-bundle/src/example/templates/msword_template.docx', 'system/tmp/msword_result.docx');
+$objPhpWord = new Markocupic\PhpOffice\PhpWord\MsWordTemplateProcessor('vendor/markocupic/phpoffice-bundle/docs/example/templates/ms_word_template.docx', 'system/tmp/msword_result.docx');
 
 // Options defaults
 //$optionsDefaults = array(
@@ -30,7 +36,7 @@ $objPhpWord->replace('sometext', 'Lorem ipsum dolor sit amet, consetetur sadipsc
 $objPhpWord->replace('sometext', '<B>Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt</B>', $options);
 
 // Image replacement
-$objPhpWord->replaceWithImage('my-best-image', 'vendor/markocupic/phpoffice-bundle/src/example/assets/my-best-image.jpg', array('width' => '160mm'));
+$objPhpWord->replaceWithImage('my-best-image', 'vendor/markocupic/phpoffice-bundle/docs/example/assets/my-best-image.jpg', array('width' => '160mm'));
 
 // Clone rows
 // Push first datarecord to cloned row
@@ -41,7 +47,7 @@ $objPhpWord->addToClone('rank', 'firstname', 'James', array('multiline' => false
 $objPhpWord->addToClone('rank', 'lastname', 'First', array('multiline' => false));
 $objPhpWord->addToClone('rank', 'time', '01:23:55', array('multiline' => false));
 // Add an image with a predefined height
-$objPhpWord->addToClone('rank', 'avatar', 'vendor/markocupic/phpoffice-bundle/src/example/assets/avatar_1.png', array('type' => 'image', 'height' => '30mm'));
+$objPhpWord->addToClone('rank', 'avatar', 'vendor/markocupic/phpoffice-bundle/docs/example/assets/avatar_1.png', array('type' => 'image', 'height' => '30mm'));
 
 // Push second datarecord to cloned row
 $objPhpWord->createClone('rank');
@@ -51,7 +57,7 @@ $objPhpWord->addToClone('rank', 'firstname', 'James', array('multiline' => false
 $objPhpWord->addToClone('rank', 'lastname', 'Last', array('multiline' => false));
 $objPhpWord->addToClone('rank', 'time', '01:25:55', array('multiline' => false));
 // Add an image with a predefined width
-$objPhpWord->addToClone('rank', 'avatar', 'vendor/markocupic/phpoffice-bundle/src/example/assets/avatar_2.png', array('type' => 'image', 'width' => '28.3mm'));
+$objPhpWord->addToClone('rank', 'avatar', 'vendor/markocupic/phpoffice-bundle/docs/example/assets/avatar_2.png', array('type' => 'image', 'width' => '28.3mm'));
 
 // Push third datarecord, etc...
 //$objPhpWord->createClone('rank');
